@@ -103,10 +103,9 @@ class Gateway:
             'x-code': code, 'x-state': state,
         })
 
-        if response.status_code == requests.codes.ok:
-            self.cache.set(state, self.toJson(res, **{
-                'x-code': code, 'x-state': state,
-            }), ex=REDIS_EXPIRATION)
+        self.cache.set(state, self.toJson(res, **{
+            'x-code': code, 'x-state': state,
+        }), ex=REDIS_EXPIRATION)
 
     def toFalcon(self, res, result, **kwargs):
         """
