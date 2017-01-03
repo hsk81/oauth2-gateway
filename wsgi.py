@@ -80,17 +80,17 @@ class Gateway:
         error = req.get_param('error')
         if error is not None:
             self.cache.set(state, JSON.dumps({
-                'body': {
+                'body': JSON.dumps({
                     'error-description': req.get_param('error_description'),
                     'error': req.get_param('error')
-                },
-                'content-type': 'application/json',
+                }),
+                'content-type': 'application/json; charset=utf-8',
                 'status': falcon.HTTP_403
             }), ex=REDIS_EXPIRATION)
 
         res_json = self.cache.get(state)
         if res_json is not None:
-            return self.fromJson(res, res_json, **{
+            return self.fromJson(res, res_json.decode('utf-8'), **{
                 'x-code': True, 'x-state': True,
             })
 
@@ -141,8 +141,8 @@ class Gateway:
             'status': res.status
         }
 
-        for key, value in kwargs.items():
-            data[key] = value
+        for k, v in kwargs.items():
+            data[k] = v
 
         return JSON.dumps(data)
 
@@ -156,8 +156,9 @@ class Gateway:
         res.content_type = data['content-type']
         res.status = data['status']
 
-        for key, value in kwargs.items():
-            res.set_header(key, data.get(key))
+        for k, v in kwargs.items():
+            if data.get(k) is not None:
+                res.set_header(k, data.get(k))
 
         return res
 
