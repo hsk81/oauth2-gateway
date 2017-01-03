@@ -126,8 +126,9 @@ class Gateway:
         res.content_type = result.headers['content-type']
         res.status = '{0} {1}'.format(result.status_code, result.reason)
 
-        for key, value in kwargs.items():
-            res.set_header(key, value)
+        for k, v in kwargs.items():
+            if v is not None:
+                res.set_header(k, v)
 
         return res
 
