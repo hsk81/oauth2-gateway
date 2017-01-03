@@ -124,7 +124,7 @@ class Gateway:
         Converts a Falcon response to JSON.
         """
         data = {
-            'text': res.body,
+            'body': res.body,
             'content-type': res.content_type,
             'status': res.status
         }
