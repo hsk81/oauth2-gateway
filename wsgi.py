@@ -79,15 +79,14 @@ class Gateway:
 
         error = req.get_param('error')
         if error is not None:
-            self.cache.set(state, {
-                'body': JSON.dumps({
+            self.cache.set(state, JSON.dumps({
+                'body': {
                     'error-description': req.get_param('error_description'),
                     'error': req.get_param('error')
-                }),
+                },
                 'content-type': 'application/json',
-                'status': falcon.HTTP_403,
-                'x-state': state,
-            }, ex=REDIS_EXPIRATION)
+                'status': falcon.HTTP_403
+            }), ex=REDIS_EXPIRATION)
 
         res_json = self.cache.get(state)
         if res_json is not None:
