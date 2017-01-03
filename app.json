@@ -1,0 +1,32 @@
+{
+  "name": "oauth2-gateway",
+  "scripts": {
+  },
+  "env": {
+    "ACCESS_TOKEN_URI": {
+      "required": true
+    },
+    "CLIENT_ID": {
+      "required": true
+    },
+    "CLIENT_SECRET": {
+      "required": true
+    },
+    "REDIRECT_URI": {
+      "required": true
+    },
+    "REDIS_URL": {
+      "required": true
+    }
+  },
+  "formation": {
+  },
+  "addons": [
+    "heroku-redis"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}
