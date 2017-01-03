@@ -4,6 +4,7 @@
 import falcon
 import json as JSON
 import os
+import redis
 import requests
 
 from datetime import datetime as dt
@@ -12,10 +13,26 @@ from requests.utils import urlparse
 ###############################################################################
 ###############################################################################
 
+ACCESS_TOKEN_URI = os.environ.get('ACCESS_TOKEN_URI')
+assert ACCESS_TOKEN_URI
+CLIENT_ID = os.environ.get('CLIENT_ID')
+assert CLIENT_ID
+CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
+assert CLIENT_SECRET
+DATETIME_PATH = os.environ.get('DATETIME_PATH', '/now')
+assert DATETIME_PATH
 DEBUG = os.environ.get('DEBUG', 'false').lower().capitalize()
 assert DEBUG in ['False', '0', 'True', '1']
 DEBUG = bool(eval(DEBUG))
 assert DEBUG in [False, True]
+GRANT_TYPE = os.environ.get('GRANT_TYPE', 'authorization_code')
+assert GRANT_TYPE
+REDIRECT_URI = os.environ.get('REDIRECT_URI')
+assert REDIRECT_URI
+REDIRECT_PATH = urlparse(REDIRECT_URI).path
+assert REDIRECT_PATH
+REDIS_URL = os.environ.get('REDIS_URL')
+assert REDIS_URL
 
 ##############################################################################
 ##############################################################################
@@ -28,11 +45,6 @@ class DateTime:
         res.content_type = 'application/json'
         res.status = falcon.HTTP_200
 
-##############################################################################
-
-DATETIME_PATH = os.environ.get('DATETIME_PATH', '/now')
-assert DATETIME_PATH
-
 ###############################################################################
 ###############################################################################
 
@@ -40,25 +52,21 @@ class Gateway:
 
     def __init__(self):
 
-        self.req_template = 'POST {ACCESS_TOKEN_URI} ' \
-           'client_id="{CLIENT_ID}" client_secret="{CLIENT_SECRET}" ' \
-           'code="{CODE}" grant_type="{GRANT_TYPE}" ' \
-           'redirect_uri="{REDIRECT_URI}"'
+        self.req_template = 'POST {access_token_uri} ' \
+           'client_id="{client_id}" client_secret="{client_secret}" ' \
+           'code="{code}" grant_type="{grant_type}" ' \
+           'redirect_uri="{redirect_uri}"'
 
         self.req_template = self.req_template.format(
-            ACCESS_TOKEN_URI=ACCESS_TOKEN_URI,
-            CLIENT_ID=CLIENT_ID,
-            CLIENT_SECRET=CLIENT_SECRET,
-            CODE='{CODE}',
-            GRANT_TYPE=GRANT_TYPE,
-            REDIRECT_URI=REDIRECT_URI
+            access_token_uri=ACCESS_TOKEN_URI,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            code='{code}',
+            grant_type=GRANT_TYPE,
+            redirect_uri=REDIRECT_URI
         )
 
-        ##
-        ## TODO: replace with external service like memcached or redis!
-        ##
-
-        self.CACHE = {}
+        self.cache = redis.from_url(REDIS_URL)
 
     def on_get(self, req, res):
 
@@ -67,14 +75,11 @@ class Gateway:
             raise falcon.HTTPInvalidParam(
                 param_name='state', msg='Should be a random string.')
 
-        res_cached = self.CACHE.get(state)
-        if res_cached is not None:
-            res.body = res_cached['body']
-            res.content_type = res_cached['content_type']
-            res.status = res_cached['status']
-            res.set_header('X-Code', res_cached['X-Code'])
-            res.set_header('X-State', res_cached['X-State'])
-            return
+        res_json = self.cache.get(state)
+        if res_json is not None:
+            return self.fromJson(res, res_json, **{
+                'x-code': True, 'x-state': True,
+            })
 
         code = req.get_param('code')
         if code is None:
@@ -82,9 +87,9 @@ class Gateway:
                 param_name='code', msg='Should be a string.')
 
         if DEBUG:
-            print(self.req_template.format(CODE=code))
+            print(self.req_template.format(code=code))
 
-        result = requests.post(ACCESS_TOKEN_URI, {
+        response = requests.post(ACCESS_TOKEN_URI, {
             'client_id': CLIENT_ID,
             'client_secret': CLIENT_SECRET,
             'code': code,
@@ -92,36 +97,57 @@ class Gateway:
             'redirect_uri': REDIRECT_URI
         })
 
+        res = self.toFalcon(res, response, **{
+            'x-code': code, 'x-state': state,
+        })
+
+        if response.status_code == requests.codes.ok:
+            self.cache.set(state, self.toJson(res, **{
+                'x-code': code, 'x-state': state,
+            }))
+
+    def toFalcon(self, res, result, **kwargs):
+        """
+        Converts a Requests response to a Falcon response.
+        """
         res.body = result.text
         res.content_type = result.headers['content-type']
         res.status = '{0} {1}'.format(result.status_code, result.reason)
-        res.set_header('X-Code', code)
-        res.set_header('X-State', state)
 
-        if result.status_code == requests.codes.ok:
+        for key, value in kwargs.items():
+            res.set_header(key, value)
 
-            self.CACHE[state] = {
-                'body': res.body,
-                'content_type': res.content_type,
-                'status': res.status,
-                'X-Code': code,
-                'X-State': state
-            }
+        return res
 
-###############################################################################
+    def toJson(self, res, **kwargs):
+        """
+        Converts a Falcon response to JSON.
+        """
+        data = {
+            'text': res.body,
+            'content-type': res.content_type,
+            'status': res.status
+        }
 
-CLIENT_ID = os.environ.get('CLIENT_ID')
-assert CLIENT_ID
-CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
-assert CLIENT_SECRET
-ACCESS_TOKEN_URI = os.environ.get('ACCESS_TOKEN_URI')
-assert ACCESS_TOKEN_URI
-GRANT_TYPE = os.environ.get('GRANT_TYPE', 'authorization_code')
-assert GRANT_TYPE
-REDIRECT_URI = os.environ.get('REDIRECT_URI')
-assert REDIRECT_URI
-REDIRECT_PATH = urlparse(REDIRECT_URI).path
-assert REDIRECT_PATH
+        for key, value in kwargs.items():
+            data[key] = value
+
+        return JSON.dumps(data)
+
+    def fromJson(self, res, json, **kwargs):
+        """
+        Converts JSON to a Falcon response.
+        """
+        data = JSON.loads(json)
+
+        res.body = data['body']
+        res.content_type = data['content-type']
+        res.status = data['status']
+
+        for key, value in kwargs.items():
+            res.set_header(key, data[key])
+
+        return res
 
 ###############################################################################
 ###############################################################################

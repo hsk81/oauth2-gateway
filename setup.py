@@ -14,6 +14,7 @@ setup(
         'falcon>=1.1.0',
         'gunicorn>=19.6.0',
         'pytest>=3.0.5',
+        'redis>=2.10.5',
         'requests>=2.12.4',
     ],
     name='oauth2-gateway',
