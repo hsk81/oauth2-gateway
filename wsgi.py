@@ -75,7 +75,19 @@ class Gateway:
         state = req.get_param('state')
         if state is None:
             raise falcon.HTTPInvalidParam(
-                param_name='state', msg='Should be a random string.')
+                param_name='state', msg='It should be a random challenge.')
+
+        error = req.get_param('error')
+        if error is not None:
+            self.cache.set(state, {
+                'body': JSON.dumps({
+                    'error-description': req.get_param('error_description'),
+                    'error': req.get_param('error')
+                }),
+                'content-type': 'application/json',
+                'status': falcon.HTTP_403,
+                'x-state': state,
+            }, ex=REDIS_EXPIRATION)
 
         res_json = self.cache.get(state)
         if res_json is not None:
@@ -86,7 +98,7 @@ class Gateway:
         code = req.get_param('code')
         if code is None:
             raise falcon.HTTPInvalidParam(
-                param_name='code', msg='Should be a string.')
+                param_name='code', msg='It should be an authorization string.')
 
         if DEBUG:
             print(self.req_template.format(code=code))
@@ -146,7 +158,7 @@ class Gateway:
         res.status = data['status']
 
         for key, value in kwargs.items():
-            res.set_header(key, data[key])
+            res.set_header(key, data.get(key))
 
         return res
 
