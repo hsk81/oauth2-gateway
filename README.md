@@ -1,10 +1,33 @@
 # OAuth2 Gateway
 
-Provides a gateway to allow OAuth2 authentication for a service which supports
-such an authentication mechanism. The following parameters are required to be
-provided as environment variables:
+Provides a gateway to allow OAuth2 based authorization for a service, which
+supports such a mechanism. Here is an abstract overview:
 
-## Required environment variables
+     +--------+                               +----------------+
+     |        |--(A)- Authorization Request ->|    Resource    |
+     |        |                               |      Owner     |
+     |        |<-(B)-- Authorization Grant ---|                |
+     |        |                               +----------------+
+     |        |
+     |        |                               +----------------+
+     |        |--(C)-- Authorization Grant -->| Authorization  |
+     | Client |                               |     Server     |
+     |        |<-(D)----- Access Token -------|(oauth2-gateway)|
+     |        |                               +----------------+
+     |        |
+     |        |                               +----------------+
+     |        |--(E)----- Access Token ------>|    Resource    |
+     |        |                               |     Server     |
+     |        |<-(F)--- Protected Resource ---|                |
+     +--------+                               +----------------+
+
+The above diagram has been taken from the RFC of the [OAuth 2 Authorization Framework][2].
+
+## Environment variables
+
+The following parameters are required to be provided as environment variables:
+
+### Mandatory environment variables
 
 ```bash
 CLIENT_ID=
@@ -42,7 +65,7 @@ REDIS_URL=
 A URL to a `redis` instance, which will cache the issued access token for a
 certain period of time.
 
-## Optional environment variables
+### Optional environment variables
 
 ```bash
 DATETIME_PATH=/now
@@ -72,32 +95,7 @@ REDIS_EXPIRATION=1209600
 The default expiration time of the cached access token in seconds (which is
 equal to `14` days).
 
-## Authorization and authentication flow
-
-
-### Abstract Protocol Flow
-
-     +--------+                               +----------------+
-     |        |--(A)- Authorization Request ->|    Resource    |
-     |        |                               |      Owner     |
-     |        |<-(B)-- Authorization Grant ---|                |
-     |        |                               +----------------+
-     |        |
-     |        |                               +----------------+
-     |        |--(C)-- Authorization Grant -->| Authorization  |
-     | Client |                               |     Server     |
-     |        |<-(D)----- Access Token -------|(oauth2-gateway)|
-     |        |                               +----------------+
-     |        |
-     |        |                               +----------------+
-     |        |--(E)----- Access Token ------>|    Resource    |
-     |        |                               |     Server     |
-     |        |<-(F)--- Protected Resource ---|                |
-     +--------+                               +----------------+
-
-The above diagram has been taken from the RFC of the [OAuth 2 Authorization Framework][2].
-
-### Concrete Protocol Flow
+## A Concrete Authorization and Authentication Flow
 
 1. Visit the *authorization* URL for a service to acquire the authorization
    code, with the URI `${AUTHORIZATION_URI}`:
