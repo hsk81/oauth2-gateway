@@ -102,7 +102,7 @@ equal to `14` days).
 1. Visit the *authorization* URL for a service to acquire the authorization
    code, with the `${AUTHORIZATION_URI}`:
 
-```http
+```
 GET ${AUTHORIZATION_URI}
     ?client_id=${CLIENT_ID}
     &response_type=code
