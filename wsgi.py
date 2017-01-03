@@ -31,6 +31,8 @@ REDIRECT_URI = os.environ.get('REDIRECT_URI')
 assert REDIRECT_URI
 REDIRECT_PATH = urlparse(REDIRECT_URI).path
 assert REDIRECT_PATH
+REDIS_EXPIRATION = int(os.environ.get('REDIS_EXPIRATION', '1209600'))
+assert REDIS_EXPIRATION
 REDIS_URL = os.environ.get('REDIS_URL')
 assert REDIS_URL
 
@@ -104,7 +106,7 @@ class Gateway:
         if response.status_code == requests.codes.ok:
             self.cache.set(state, self.toJson(res, **{
                 'x-code': code, 'x-state': state,
-            }))
+            }), ex=REDIS_EXPIRATION)
 
     def toFalcon(self, res, result, **kwargs):
         """
