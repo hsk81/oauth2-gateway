@@ -53,11 +53,11 @@ HTML = """
 """
 
 HTML_FAILURE = os.environ.get(
-    'LOGIN_FAILURE', HTML.replace('{content}', '<p>login failure</p>'))
+    'HTML_FAILURE', HTML.replace('{content}', '<p>authorization failure</p>'))
 assert HTML_FAILURE
 
 HTML_SUCCESS = os.environ.get(
-    'LOGIN_SUCCESS', HTML.replace('{content}', '<p>login success</p>'))
+    'HTML_SUCCESS', HTML.replace('{content}', '<p>authorization success</p>'))
 assert HTML_SUCCESS
 
 ###############################################################################

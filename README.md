@@ -94,13 +94,15 @@ wish to acquire the token by providing an *authorization* code.
 HTML_FAILURE="<html>...</html>"
 ```
 
-Default HTML shown on failing to acquire the access token ("login" failure).
+Default HTML shown on failing to acquire the access token (authorization
+failure).
 
 ```bash
 HTML_SUCCESS="<html>...</html>"
 ```
 
-Default HTML shown on succeeding to acquire the access token ("login" success).
+Default HTML shown on succeeding to acquire the access token (authorization
+success).
 
 ```bash
 REDIS_EXPIRATION=60
