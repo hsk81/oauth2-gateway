@@ -139,7 +139,11 @@ class Gateway:
             }), ex=REDIS_EXPIRATION)
 
             return self.fromJson(res, JSON.dumps({
-                'body': HTML_FAILURE,
+                'body': HTML_FAILURE
+                    .replace('{error-description}',
+                             req.get_param('error-description') or '')
+                    .replace('{error}',
+                             req.get_param('error') or ''),
                 'content-type': 'text/html',
                 'status': falcon.HTTP_403
             }), **{
@@ -188,7 +192,9 @@ class Gateway:
         try:
             response.raise_for_status()
         except requests.HTTPError:
-            res.body = HTML_FAILURE
+            res.body = HTML_FAILURE \
+               .replace('{error-description}', '') \
+               .replace('{error}', ''),
         else:
             res.body = HTML_SUCCESS
 
