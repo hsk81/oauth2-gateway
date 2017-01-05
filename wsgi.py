@@ -138,6 +138,14 @@ class Gateway:
                 'status': falcon.HTTP_403
             }), ex=REDIS_EXPIRATION)
 
+            return self.fromJson(res, JSON.dumps({
+                'body': HTML_FAILURE,
+                'content-type': 'text/html',
+                'status': falcon.HTTP_403
+            }), **{
+                'x-code': None, 'x-state': state,
+            })
+
         res_json = self.cache.get(state)
         if res_json is not None:
             return self.fromJson(res, res_json.decode('utf-8'), **{
