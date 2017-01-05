@@ -12,7 +12,7 @@ supports such a mechanism. Here is an abstract overview:
      |        |                               +----------------+
      |        |--(C)-- Authorization Grant -->| Authorization  |
      | Client |                               |     Server     |
-     |        |<-(D)----- Access Token -------|(oauth2-gateway)|
+     |        |<-(D)----- Access Token -------|                |
      |        |                               +----------------+
      |        |
      |        |                               +----------------+
@@ -91,11 +91,23 @@ Tells the access token issuing service behind the `ACCESS_TOKEN_URI` that we
 wish to acquire the token by providing an *authorization* code.
 
 ```bash
-REDIS_EXPIRATION=1209600
+HTML_FAILURE="<html>...</html>"
+```
+
+Default HTML shown on failing to acquire the access token ("login" failure).
+
+```bash
+HTML_SUCCESS="<html>...</html>"
+```
+
+Default HTML shown on succeeding to acquire the access token ("login" success).
+
+```bash
+REDIS_EXPIRATION=60
 ```
 
 The default expiration time of the cached access token in seconds, (which is
-equal to `14` days).
+equal to `1` minute).
 
 ## A concrete Authorization and Authentication Flow
 

@@ -13,6 +13,56 @@ from requests.utils import urlparse
 ###############################################################################
 ###############################################################################
 
+HTML = """
+<html>
+    <head>
+        <style>
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+            }
+            div.table {
+                display: table;
+                height: 100%;
+                text-align: center;
+                width: 100%;
+            }
+            div.table div.table-cell {
+                display: table-cell;
+                height: 100%;
+                vertical-align: middle;
+                width: 100%;
+            }
+            p {
+                font-family: monospace;
+                font-size: larger;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="table">
+            <div class="table-cell">
+                {content}
+            </div>
+        </div>
+    </body>
+</html>
+"""
+
+HTML_FAILURE = os.environ.get(
+    'LOGIN_FAILURE', HTML.replace('{content}', '<p>login failure</p>'))
+assert HTML_FAILURE
+
+HTML_SUCCESS = os.environ.get(
+    'LOGIN_SUCCESS', HTML.replace('{content}', '<p>login success</p>'))
+assert HTML_SUCCESS
+
+###############################################################################
+###############################################################################
+
 ACCESS_TOKEN_URI = os.environ.get('ACCESS_TOKEN_URI')
 assert ACCESS_TOKEN_URI
 CLIENT_ID = os.environ.get('CLIENT_ID')
@@ -31,7 +81,7 @@ REDIRECT_URI = os.environ.get('REDIRECT_URI')
 assert REDIRECT_URI
 REDIRECT_PATH = urlparse(REDIRECT_URI).path
 assert REDIRECT_PATH
-REDIS_EXPIRATION = int(os.environ.get('REDIS_EXPIRATION', '1209600'))
+REDIS_EXPIRATION = int(os.environ.get('REDIS_EXPIRATION', '60'))
 assert REDIS_EXPIRATION
 REDIS_URL = os.environ.get('REDIS_URL')
 assert REDIS_URL
@@ -118,13 +168,35 @@ class Gateway:
             'x-code': code, 'x-state': state,
         }), ex=REDIS_EXPIRATION)
 
-    def toFalcon(self, res, result, **kwargs):
+        self.toFalconHtml(res, response, **{
+            'x-code': code, 'x-state': state,
+        })
+
+    def toFalconHtml(self, res, response, **kwargs):
+
+        res.status = '{0} {1}'.format(response.status_code, response.reason)
+        res.content_type = 'text/html'
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            res.body = HTML_FAILURE
+        else:
+            res.body = HTML_SUCCESS
+
+        for k, v in kwargs.items():
+            if v is not None:
+                res.set_header(k, v)
+
+        return res
+
+    def toFalcon(self, res, response, **kwargs):
         """
         Converts a Requests response to a Falcon response.
         """
-        res.body = result.text
-        res.content_type = result.headers['content-type']
-        res.status = '{0} {1}'.format(result.status_code, result.reason)
+        res.status = '{0} {1}'.format(response.status_code, response.reason)
+        res.content_type = response.headers['content-type']
+        res.body = response.text
 
         for k, v in kwargs.items():
             if v is not None:
